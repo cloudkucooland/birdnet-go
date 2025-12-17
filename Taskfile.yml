@@ -26,9 +26,10 @@ vars:
   # Common build flags
   CGO_FLAGS: CGO_ENABLED=1 CGO_CFLAGS="-I$HOME/src/tensorflow"
   BUILD_FLAGS: -ldflags "-s -w -X 'main.buildDate={{.BUILD_DATE}}' -X 'main.version={{.VERSION}}'"
-  # System paths
+  # System paths - unused?
   SYSTEM_LIB_DIR_AMD64: /usr/lib
   SYSTEM_LIB_DIR_ARM64: /usr/aarch64-linux-gnu/lib
+  SYSTEM_LIB_DIR_RISCV64: /usr/riscv64-linux-gnu/lib
 
 tasks:
   default:
@@ -114,7 +115,7 @@ tasks:
       OS:
         sh: |
           case "{{.UNAME_S}}" in
-            Linux) echo "linux";;
+            Linux|linux) echo "linux";;
             Darwin) echo "darwin";;
             *) echo "unsupported";;
           esac
@@ -123,6 +124,7 @@ tasks:
           case "{{.UNAME_M}}" in
             x86_64) echo "amd64";;
             aarch64|arm64) echo "arm64";;
+            riscv64) echo "riscv64";;
             *) echo "unsupported";;
           esac
 
@@ -143,7 +145,7 @@ tasks:
         echo "  • Go dev tools (golangci-lint, air)"
         echo "  • Frontend dependencies and Playwright browsers"
         echo ""
-        read -p "Continue with setup? (y/N) " -n 1 -r
+        read -p "Continue with setup? (y/N) " -r
         echo
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
           echo "Setup cancelled."
@@ -212,7 +214,7 @@ tasks:
               echo "   Current: ${CURRENT_GO_VERSION}"
               echo "   Required: ${REQUIRED_GO_VERSION}.x"
               echo ""
-              read -p "   Upgrade to Go ${GO_VERSION}? (y/N) " -n 1 -r
+              read -p "   Upgrade to Go ${GO_VERSION}? (y/N) " -r
               echo
               if [[ $REPLY =~ ^[Yy]$ ]]; then
                 INSTALL_GO=true
@@ -277,7 +279,7 @@ tasks:
             echo "   Allows building for ARM64/aarch64 from x86_64"
             echo "   Useful for building for Raspberry Pi, etc."
             echo ""
-            read -p "   Install ARM64 cross-compilation tools? (y/N) " -n 1 -r
+            read -p "   Install ARM64 cross-compilation tools? (y/N) " -r
             echo
             if [[ $REPLY =~ ^[Yy]$ ]]; then
               echo "📥 Installing ARM64 cross-compilation tools..."
@@ -328,7 +330,7 @@ tasks:
               echo "   Current: ${CURRENT_GO_VERSION}"
               echo "   Required: ${REQUIRED_GO_VERSION}.x"
               echo ""
-              read -p "   Upgrade to Go ${REQUIRED_GO_VERSION}? (y/N) " -n 1 -r
+              read -p "   Upgrade to Go ${REQUIRED_GO_VERSION}? (y/N) " -r
               echo
               if [[ $REPLY =~ ^[Yy]$ ]]; then
                 INSTALL_GO=true
@@ -840,7 +842,7 @@ tasks:
       OS:
         sh: |
           case "{{.UNAME_S}}" in
-            Linux) echo "linux";;
+            Linux|linux) echo "linux";;
             Darwin) echo "darwin";;
             *) echo "unsupported";;
           esac
@@ -849,6 +851,7 @@ tasks:
           case "{{.UNAME_M}}" in
             x86_64) echo "amd64";;
             aarch64|arm64) echo "arm64";;
+            riscv64) echo "riscv64";;
             *) echo "unsupported";;
           esac
 
@@ -882,6 +885,24 @@ tasks:
           export CC=aarch64-linux-gnu-gcc
         fi
         GOOS=linux GOARCH=arm64 {{.CGO_FLAGS}} \
+        CGO_LDFLAGS="-L{{.TFLITE_LIB_DIR}} -ltensorflowlite_c" \
+        go build -trimpath {{.BUILD_FLAGS}} -o {{.BINARY_DIR}}/{{.BINARY_NAME}}
+
+  linux_riscv64:
+    deps: [check-tools, check-tensorflow, download-avicommons-data, frontend-build]
+    vars:
+      TFLITE_LIB_DIR: '{{.DOCKER_LIB_DIR | default .SYSTEM_LIB_DIR_ARM64}}'
+      TFLITE_LIB_ARCH: linux_riscv64.tar.gz
+      TARGET: linux_riscv64
+    cmds:
+      - task: download-tflite
+        vars: {TFLITE_LIB_DIR: '{{.TFLITE_LIB_DIR}}', TFLITE_LIB_ARCH: '{{.TFLITE_LIB_ARCH}}', TARGET: '{{.TARGET}}'}
+      - |
+        mkdir -p {{.TFLITE_LIB_DIR}}
+        if [ "$(uname -m)" != "aarch64" ]; then
+          export CC=riscv64-linux-gnu-gcc
+        fi
+        GOOS=linux GOARCH=riscv64 {{.CGO_FLAGS}} \
         CGO_LDFLAGS="-L{{.TFLITE_LIB_DIR}} -ltensorflowlite_c" \
         go build -trimpath {{.BUILD_FLAGS}} -o {{.BINARY_DIR}}/{{.BINARY_NAME}}
 
