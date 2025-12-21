@@ -175,7 +175,7 @@ tasks:
       - |
         echo "🔍 Detecting operating system..."
 
-        if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        if [[ "$OSTYPE" == "linux"* ]]; then
           echo "📦 Installing dependencies for Linux (apt-based)..."
 
           # Check if running as root or with sudo
