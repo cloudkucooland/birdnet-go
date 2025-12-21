@@ -1,0 +1,19 @@
+Tested on Starfive2-lite debian trixie
+
+Switch to normal debian trixie apt source
+apt update; apt upgrade
+(x2)
+reboot
+
+Install Go from apt (probably not necessary)
+
+Install rustup from apt
+Manually ast-grep from source
+Remove ast-grep from package.json
+
+Edit Taskfile 
+	- remove "-n 1" from read commands (x3)
+	- add logic for riscv64
+	- add lowercase linux in os detection
+
+
